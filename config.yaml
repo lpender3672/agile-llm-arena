@@ -1,0 +1,38 @@
+# LLM Benchmark Configuration
+
+models:
+  - id: claude-sonnet-4-5
+    provider: anthropic_api
+    display: "Claude Sonnet 4.5"
+  - id: claude/claude-sonnet-4-5
+    provider: openrouter
+    display: "Claude Sonnet (OpenRouter)"
+  - id: mistral/devstral-small
+    provider: openrouter
+    display: "Devstral Small"
+  - id: google/gemini-flash-1.5
+    provider: openrouter
+    display: "Gemini Flash 1.5"
+  - id: claude-code
+    provider: claude_code_cli
+    display: "Claude Code CLI"
+
+projects:
+  - ring_buffer
+  - pid_controller
+  - uart_driver
+
+workflows:
+  - tdd          # write tests first, then implementation
+  - impl_first   # implement first, then write tests
+  - iterative    # implement + test in small loops
+
+runner:
+  parallel_runs: 2          # concurrent model+project combos
+  max_tokens_per_run: 50000
+  timeout_seconds: 300
+  sandbox_base: /tmp/llm-bench-sandboxes
+
+mutation:
+  tool: mutmut              # or: universalmutator, cosmic-ray
+  timeout_per_mutant: 10

@@ -1,0 +1,45 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+*.egg
+*.whl
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# pytest / coverage
+.pytest_cache/
+.coverage
+htmlcov/
+coverage.xml
+
+# Benchmark artefacts
+results/
+sandboxes/
+_unity_cache/
+
+# mutmut
+.mutmut-cache
+
+# Environment / secrets
+.env
+*.env
+config.local.yaml
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*~
+
+# OS
+.DS_Store
+Thumbs.db
