@@ -1,4 +1,4 @@
-# agile-llm-arena
+# [WIP] agile-llm-arena
 
 Benchmarks LLM × workflow × project combinations for embedded C software quality.
 Primary question: which combination of model and workflow achieves the best **mutation score per token** (API models) or **per second** (self-hosted)?
