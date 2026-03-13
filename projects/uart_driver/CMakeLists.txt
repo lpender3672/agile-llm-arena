@@ -1,30 +1,49 @@
-cmake_minimum_required(VERSION 3.10)
-project(uart_driver C)
+cmake_minimum_required(VERSION 3.14)
+project(uart_driver C CXX)
 
-set(CMAKE_C_COMPILER clang)
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra -g -fPIC -m64")
-set(CMAKE_C_STANDARD 99)
-
-# Find Unity testing framework
-find_package(PkgConfig REQUIRED)
-pkg_check_modules(UNITY unity)
-
-if(NOT UNITY_FOUND)
-    message(STATUS "Unity not found via pkg-config, using system paths")
-    set(UNITY_INCLUDE_DIRS "/usr/include")
-    set(UNITY_LIBRARIES "unity")
+# Set runtime library for Windows
+if(MSVC OR (CMAKE_C_COMPILER_ID MATCHES "Clang" AND WIN32))
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedDLL")
 endif()
 
-include_directories(src)
-include_directories(${UNITY_INCLUDE_DIRS})
+# Set C standard
+set(CMAKE_C_STANDARD 99)
+
+# Try to find Clang, fallback to system default
+if(NOT CMAKE_C_COMPILER)
+    find_program(CLANG_COMPILER clang)
+    if(CLANG_COMPILER)
+        set(CMAKE_C_COMPILER ${CLANG_COMPILER})
+        set(CMAKE_CXX_COMPILER clang++)
+    endif()
+endif()
+
+# Compiler flags
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra -g")
+if(NOT WIN32)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
+endif()
+
+# Fetch Google Test with proper options for Windows
+include(FetchContent)
+FetchContent_Declare(
+    googletest
+    URL https://github.com/google/googletest/archive/v1.14.0.zip
+)
+
+# Set gtest options before making it available
+set(gtest_force_shared_crt ON CACHE BOOL "Use shared (DLL) run-time library even when libraries are static" FORCE)
+
+FetchContent_MakeAvailable(googletest)
 
 # Library: UART frame implementation
 add_library(uart_frame_lib src/uart_frame.c)
 target_include_directories(uart_frame_lib PUBLIC src)
 
-# Test executable
-add_executable(test_uart_frame test/test_uart_frame.c)
-target_link_libraries(test_uart_frame uart_frame_lib ${UNITY_LIBRARIES})
+# Test executable (C++ with gtest)
+add_executable(test_uart_frame test/test_uart_frame.cc)
+target_link_libraries(test_uart_frame uart_frame_lib gtest_main)
+target_include_directories(test_uart_frame PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 # Enable testing
 enable_testing()
