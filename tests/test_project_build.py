@@ -1,186 +1,148 @@
-"""Test that project templates compile and run successfully with CMake and Clang."""
+"""Test that gtest projects compile and run successfully with CMake and LLVM Clang."""
 
 import os
 import subprocess
-import tempfile
+import shutil
+import sys
 from pathlib import Path
 
 
-def create_project_from_skeleton(project_path, skeleton_dict):
-    """Extract skeleton files to a temporary directory."""
-    tempdir = Path(tempfile.mkdtemp())
-    for filename, content in skeleton_dict.items():
-        filepath = tempdir / filename
-        filepath.parent.mkdir(parents=True, exist_ok=True)
-        filepath.write_text(content)
-    return tempdir
+def get_workspace_root():
+    """Get the workspace root directory."""
+    return Path(__file__).parent.parent
+
+
+def get_project_path(project_name):
+    """Get the path to a project."""
+    return get_workspace_root() / "projects" / project_name
+
+
+def get_exe_suffix():
+    """Get the executable suffix for the current platform."""
+    return ".exe" if sys.platform == "win32" else ""
+
+
+def clean_build_dir(project_path):
+    """Clean build directory if it exists."""
+    build_dir = project_path / "build"
+    if build_dir.exists():
+        shutil.rmtree(build_dir)
+
+
+def configure_project(project_path, compiler="clang"):
+    """Configure a project with CMake using specified compiler.
+    
+    Returns:
+        True if successful, False otherwise
+    """
+    build_dir = project_path / "build"
+    build_dir.mkdir(exist_ok=True)
+    
+    result = subprocess.run(
+        ["cmake", "..", f"-DCMAKE_C_COMPILER={compiler}"],
+        cwd=str(build_dir),
+        capture_output=True,
+        text=True,
+        timeout=60,
+    )
+    return result.returncode == 0
+
+
+def build_project(project_path):
+    """Build a project with CMake.
+    
+    Returns:
+        True if successful, False otherwise
+    """
+    build_dir = project_path / "build"
+    
+    result = subprocess.run(
+        ["cmake", "--build", ".", "--config", "Debug"],
+        cwd=str(build_dir),
+        capture_output=True,
+        text=True,
+        timeout=120,
+    )
+    return result.returncode == 0
+
+
+def run_gtest(test_exe_path):
+    """Run a gtest executable.
+    
+    Returns:
+        True if all tests passed, False otherwise
+    """
+    result = subprocess.run(
+        [str(test_exe_path)],
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    return result.returncode == 0
 
 
 def test_pid_controller_compiles():
     """Test that PID controller project compiles with CMake and Clang."""
-    import sys
-    sys.path.insert(0, str(Path(__file__).parent.parent))
-    from projects.pid_controller import SKELETON
+    project_path = get_project_path("pid_controller")
+    clean_build_dir(project_path)
     
-    workdir = create_project_from_skeleton("pid_controller", SKELETON)
+    # Configure
+    assert configure_project(project_path), "CMake configuration failed"
     
-    try:
-        # Create build directory
-        build_dir = workdir / "build"
-        build_dir.mkdir()
-        
-        # Configure with CMake using Clang
-        result = subprocess.run(
-            ["cmake", "..", "-DCMAKE_C_COMPILER=clang"],
-            cwd=str(build_dir),
-            capture_output=True,
-            text=True,
-            timeout=30,
-        )
-        assert result.returncode == 0, f"CMake config failed: {result.stderr}"
-        
-        # Build with CMake
-        result = subprocess.run(
-            ["cmake", "--build", "."],
-            cwd=str(build_dir),
-            capture_output=True,
-            text=True,
-            timeout=60,
-        )
-        assert result.returncode == 0, f"CMake build failed: {result.stderr}"
-        
-        # Check that test executable was created
-        test_exe = build_dir / "test_pid"
-        assert test_exe.exists(), f"Test executable not found: {test_exe}"
-        
-    finally:
-        # Cleanup
-        import shutil
-        shutil.rmtree(workdir)
+    # Build
+    assert build_project(project_path), "CMake build failed"
+    
+    # Check that test executable was created
+    exe_suffix = get_exe_suffix()
+    test_exe = project_path / "build" / f"test_pid{exe_suffix}"
+    assert test_exe.exists(), f"Test executable not found: {test_exe}"
 
 
 def test_uart_driver_compiles():
     """Test that UART driver project compiles with CMake and Clang."""
-    import sys
-    sys.path.insert(0, str(Path(__file__).parent.parent))
-    from projects.uart_driver import SKELETON
+    project_path = get_project_path("uart_driver")
+    clean_build_dir(project_path)
     
-    workdir = create_project_from_skeleton("uart_driver", SKELETON)
+    # Configure
+    assert configure_project(project_path), "CMake configuration failed"
     
-    try:
-        # Create build directory
-        build_dir = workdir / "build"
-        build_dir.mkdir()
-        
-        # Configure with CMake using Clang
-        result = subprocess.run(
-            ["cmake", "..", "-DCMAKE_C_COMPILER=clang"],
-            cwd=str(build_dir),
-            capture_output=True,
-            text=True,
-            timeout=30,
-        )
-        assert result.returncode == 0, f"CMake config failed: {result.stderr}"
-        
-        # Build with CMake
-        result = subprocess.run(
-            ["cmake", "--build", "."],
-            cwd=str(build_dir),
-            capture_output=True,
-            text=True,
-            timeout=60,
-        )
-        assert result.returncode == 0, f"CMake build failed: {result.stderr}"
-        
-        # Check that test executable was created
-        test_exe = build_dir / "test_uart_frame"
-        assert test_exe.exists(), f"Test executable not found: {test_exe}"
-        
-    finally:
-        # Cleanup
-        import shutil
-        shutil.rmtree(workdir)
+    # Build
+    assert build_project(project_path), "CMake build failed"
+    
+    # Check that test executable was created
+    exe_suffix = get_exe_suffix()
+    test_exe = project_path / "build" / f"test_uart_frame{exe_suffix}"
+    assert test_exe.exists(), f"Test executable not found: {test_exe}"
 
 
 def test_pid_controller_runs():
-    """Test that PID controller test executable runs."""
-    import sys
-    sys.path.insert(0, str(Path(__file__).parent.parent))
-    from projects.pid_controller import SKELETON
+    """Test that PID controller gtest executable runs."""
+    project_path = get_project_path("pid_controller")
+    clean_build_dir(project_path)
     
-    workdir = create_project_from_skeleton("pid_controller", SKELETON)
+    # Configure and build
+    assert configure_project(project_path), "CMake configuration failed"
+    assert build_project(project_path), "CMake build failed"
     
-    try:
-        build_dir = workdir / "build"
-        build_dir.mkdir()
-        
-        # Build
-        subprocess.run(
-            ["cmake", "..", "-DCMAKE_C_COMPILER=clang"],
-            cwd=str(build_dir),
-            capture_output=True,
-            timeout=30,
-        )
-        subprocess.run(
-            ["cmake", "--build", "."],
-            cwd=str(build_dir),
-            capture_output=True,
-            timeout=60,
-        )
-        
-        # Run test
-        test_exe = build_dir / "test_pid"
-        result = subprocess.run(
-            [str(test_exe)],
-            capture_output=True,
-            text=True,
-            timeout=10,
-        )
-        # Even empty test should complete successfully
-        assert result.returncode == 0, f"Test execution failed: {result.stderr}"
-        
-    finally:
-        import shutil
-        shutil.rmtree(workdir)
+    # Run test
+    exe_suffix = get_exe_suffix()
+    test_exe = project_path / "build" / f"test_pid{exe_suffix}"
+    assert test_exe.exists(), f"Test executable not found: {test_exe}"
+    assert run_gtest(test_exe), "GTest execution failed"
 
 
 def test_uart_driver_runs():
-    """Test that UART driver test executable runs."""
-    import sys
-    sys.path.insert(0, str(Path(__file__).parent.parent))
-    from projects.uart_driver import SKELETON
+    """Test that UART driver gtest executable runs."""
+    project_path = get_project_path("uart_driver")
+    clean_build_dir(project_path)
     
-    workdir = create_project_from_skeleton("uart_driver", SKELETON)
+    # Configure and build
+    assert configure_project(project_path), "CMake configuration failed"
+    assert build_project(project_path), "CMake build failed"
     
-    try:
-        build_dir = workdir / "build"
-        build_dir.mkdir()
-        
-        # Build
-        subprocess.run(
-            ["cmake", "..", "-DCMAKE_C_COMPILER=clang"],
-            cwd=str(build_dir),
-            capture_output=True,
-            timeout=30,
-        )
-        subprocess.run(
-            ["cmake", "--build", "."],
-            cwd=str(build_dir),
-            capture_output=True,
-            timeout=60,
-        )
-        
-        # Run test
-        test_exe = build_dir / "test_uart_frame"
-        result = subprocess.run(
-            [str(test_exe)],
-            capture_output=True,
-            text=True,
-            timeout=10,
-        )
-        # Even empty test should complete successfully
-        assert result.returncode == 0, f"Test execution failed: {result.stderr}"
-        
-    finally:
-        import shutil
-        shutil.rmtree(workdir)
+    # Run test
+    exe_suffix = get_exe_suffix()
+    test_exe = project_path / "build" / f"test_uart_frame{exe_suffix}"
+    assert test_exe.exists(), f"Test executable not found: {test_exe}"
+    assert run_gtest(test_exe), "GTest execution failed"
+
