@@ -1,0 +1,19 @@
+# MULL Mutation Testing Configuration for PID Controller
+mutators:
+  - cxx_eq_to_ne
+  - cxx_lt_to_le
+  - cxx_gt_to_ge
+  - cxx_le_to_lt
+  - cxx_ge_to_gt
+  - cxx_add_to_sub
+  - cxx_sub_to_add
+  - cxx_mul_to_div
+  - cxx_rem_to_div
+  - cxx_bitwise_and_to_or
+  - cxx_bitwise_or_to_and
+  - cxx_bitwise_xor_to_or
+
+tests:
+  - test_pid
+
+timeout: 5000

@@ -56,8 +56,8 @@ agile-llm-arena/
 │   ├── read.py
 │   ├── write.py
 │   ├── bash.py
-│   ├── run_tests.py       # runs `make test`, returns {passed, output} JSON
-│   └── run_mutation.py    # runs mutmut, returns score + surviving diffs JSON
+│   ├── run_tests.py       # runs CMake-based tests, returns {passed, output} JSON
+│   └── run_mutation.py    # runs MULL mutation testing, returns score JSON
 ├── providers/
 │   ├── __init__.py        # make_provider factory
 │   ├── base.py            # Provider ABC, RunResult
@@ -104,9 +104,34 @@ Providers: `anthropic_api` | `openrouter` | `ollama` | `claude_code_cli`
 2. Add `<name>` to `config.yaml` under `projects:`
 
 Each project needs:
-- A C source skeleton (`src/<module>.c`, `src/<module>.h`)
+- A C source skeleton with CMakeLists.txt (`src/<module>.c`, `src/<module>.h`)
+- A CMake build configuration (`CMakeLists.txt`)
 - A Unity test skeleton (`test/test_<module>.c`)
-- A `Makefile` with a `test` target that exits non-zero on failure
+- A MULL mutation testing config (`mull.yml`)
+
+### Template Projects Setup
+
+**Template projects use:**
+- **Build System**: CMake 3.10+
+- **Compiler**: Clang (standard for embedded/systems code)
+- **Testing Framework**: Unity (lightweight C unit testing)
+- **Mutation Testing**: MULL (C/C++ mutation testing)
+
+See [TEMPLATE_PROJECTS.md](TEMPLATE_PROJECTS.md) and [BUILDING.md](BUILDING.md) for complete setup details.
+
+**Built-in template projects:**
+- `pid_controller` — Discrete-time PID controller with anti-windup
+- `uart_driver` — UART framing layer with COBS encoding and CRC-8
+
+Quick build example:
+```bash
+cd projects/pid_controller
+mkdir build && cd build
+cmake .. -DCMAKE_C_COMPILER=clang
+cmake --build .
+ctest --verbose
+mull-runner -config ../mull.yml --log-level=info
+```
 
 ## Adding a Workflow
 
